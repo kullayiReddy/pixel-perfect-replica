@@ -123,3 +123,16 @@ RESUME TEXT:
 ${resumeText.slice(0, 30000)}
 """`;
 }
+
+export function scoreListingsPrompt(resumeText: string, listings: { id: string; title: string; company: string; description: string }[]) {
+  return `You are an ATS analyst. Score how well the resume matches EACH real job listing below. Be realistic. Return ONLY JSON:
+{"scores":[{"id": string, "match_score": integer 0-100, "why": one short sentence, "missing_skills":[string]}]}
+
+RESUME:
+"""
+${resumeText.slice(0, 20000)}
+"""
+
+LISTINGS:
+${listings.map((l) => `[id=${l.id}] ${l.title} at ${l.company}\n${l.description.slice(0, 1200)}`).join("\n\n")}`;
+}

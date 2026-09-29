@@ -99,6 +99,7 @@ export type JobMatch = {
   missing_skills?: string[];
   search_keywords?: string;
   tailored_text?: string;
+  openings?: Opening[];
 };
 
 const clamp = (n: unknown) =>
@@ -194,4 +195,74 @@ export const generateInterviewPrep = createServerFn({ method: "POST" })
       interviewPrompt(resume.raw_text, data.jobTitle, data.jobListing || `A typical ${data.jobTitle} role.`),
     )) as { questions?: InterviewQA[] };
     return { questions: (out.questions ?? []).filter((q) => q?.question) };
+  });
+
+export type Opening = {
+  id: string; title: string; company: string; location: string; url: string;
+  salary?: string; created?: string; description: string;
+  match_score: number; why?: string; missing_skills?: string[];
+};
+
+export const fetchOpenings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { resumeId: string; jobTitle: string; country: string; where?: string | undefined }) => {
+    const allowed = ["in", "us", "gb", "ca", "au", "de", "sg", "nl", "fr", "nz", "za"];
+    if (!allowed.includes(input.country)) throw new Error("Unsupported country.");
+    return { ...input, jobTitle: input.jobTitle.slice(0, 120), where: (input.where ?? "").slice(0, 80) };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const appId = process.env["ADZUNA_APP_ID"];
+    const appKey = process.env["ADZUNA_APP_KEY"];
+    if (!appId || !appKey) throw new Error("The job board isn't connected yet.");
+    const { data: resume } = await supabase
+      .from("resumes").select("raw_text, job_matches").eq("id", data.resumeId).eq("user_id", userId).single();
+    if (!resume?.raw_text) throw new Error("Resume not found.");
+
+    const qs = new URLSearchParams({
+      app_id: appId, app_key: appKey, results_per_page: "10", what: data.jobTitle, sort_by: "relevance",
+    });
+    if (data.where) qs.set("where", data.where);
+    const res = await fetch(`https://api.adzuna.com/v1/api/jobs/${data.country}/search/1?${qs}`);
+    if (!res.ok) {
+      console.error("Adzuna error", res.status, (await res.text()).slice(0, 300));
+      throw new Error(res.status === 429 ? "The job board is busy. Try again shortly." : "Could not load job openings.");
+    }
+    const body = (await res.json()) as {
+      results?: {
+        id: string; title: string; description: string; redirect_url: string; created?: string;
+        company?: { display_name?: string }; location?: { display_name?: string };
+        salary_min?: number; salary_max?: number;
+      }[];
+    };
+    const strip = (s: string) => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    const raw = (body.results ?? []).map((r) => ({
+      id: String(r.id),
+      title: strip(r.title),
+      company: r.company?.display_name ?? "Unknown company",
+      location: r.location?.display_name ?? "",
+      url: r.redirect_url,
+      created: r.created,
+      salary: r.salary_min ? `${Math.round(r.salary_min).toLocaleString()}${r.salary_max && r.salary_max !== r.salary_min ? ` – ${Math.round(r.salary_max).toLocaleString()}` : ""}` : undefined,
+      description: strip(r.description ?? ""),
+    }));
+    if (!raw.length) return { openings: [] as Opening[] };
+
+    const { geminiJson, scoreListingsPrompt } = await import("./gemini.server");
+    const scored = (await geminiJson(scoreListingsPrompt(resume.raw_text, raw))) as {
+      scores?: { id: string; match_score?: number; why?: string; missing_skills?: string[] }[];
+    };
+    const byId = new Map((scored.scores ?? []).map((s) => [String(s.id), s]));
+    const openings: Opening[] = raw
+      .map((r) => {
+        const s = byId.get(r.id);
+        return { ...r, match_score: clamp(s?.match_score), why: s?.why, missing_skills: s?.missing_skills ?? [] } as Opening;
+      })
+      .sort((a, b) => b.match_score - a.match_score);
+
+    const jobs = ((resume.job_matches as JobMatch[] | null) ?? []).map((j) =>
+      j.title === data.jobTitle ? { ...j, openings } : j,
+    );
+    await supabase.from("resumes").update({ job_matches: jobs as never }).eq("id", data.resumeId).eq("user_id", userId);
+    return { openings };
   });
