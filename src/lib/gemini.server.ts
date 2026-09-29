@@ -18,8 +18,11 @@ export async function geminiJson(prompt: string): Promise<unknown> {
       },
     );
 
-    if (res.status === 404) {
-      lastError = `Model ${model} unavailable for this key.`;
+    if (res.status === 404 || res.status === 429 || res.status >= 500) {
+      lastError =
+        res.status === 404
+          ? `Model ${model} is not available for this API key.`
+          : `The AI service is busy right now. Please try again in a moment.`;
       continue;
     }
     if (!res.ok) {
