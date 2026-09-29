@@ -242,7 +242,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function EntryList({ title, entries }: { title: string; entries?: ResumeEntry[] }) {
+function EntryList({ title, entries }: { title: string; entries?: ResumeEntry[] | undefined }) {
   if (!entries?.length) return null;
   return (
     <Section title={title}>
@@ -280,7 +280,7 @@ function EntryList({ title, entries }: { title: string; entries?: ResumeEntry[] 
   );
 }
 
-function BulletList({ title, items }: { title: string; items?: string[] }) {
+function BulletList({ title, items }: { title: string; items?: string[] | undefined }) {
   if (!items?.length) return null;
   return (
     <Section title={title}>
@@ -362,7 +362,7 @@ function KeywordBlock({
   tone,
 }: {
   title: string;
-  items?: string[];
+  items?: string[] | undefined;
   tone: "success" | "destructive";
 }) {
   if (!items?.length) return null;
@@ -385,7 +385,7 @@ function Relevance({
   value,
 }: {
   label: string;
-  value?: { score?: number; comment?: string };
+  value?: { score?: number; comment?: string } | undefined;
 }) {
   if (!value) return null;
   return (
