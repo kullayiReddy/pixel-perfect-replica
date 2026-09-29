@@ -1,4 +1,4 @@
-const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+const MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
 
 export async function geminiJson(prompt: string): Promise<unknown> {
   const apiKey = process.env["GEMINI_API_KEY"];
