@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { Download, ExternalLink, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -13,6 +13,7 @@ import {
 import {
   saveEditedResume, suggestJobs, tailorResume, type JobMatch,
 } from "@/lib/resume.functions";
+import { downloadResumePdf } from "@/lib/resume-pdf";
 
 function platformLinks(q: string) {
   const e = encodeURIComponent(q);
@@ -68,7 +69,7 @@ export function JobMatches({
   });
 
   const open = (j: JobMatch) => {
-    setEditing(j); setText(rawText); setChanges([]); setProjected(null);
+    setEditing(j); setText(j.tailored_text ?? rawText); setChanges([]); setProjected(null);
   };
 
   if (!jobs) {
@@ -113,7 +114,13 @@ export function JobMatches({
                 {p.name} <ExternalLink className="h-3 w-3" />
               </a>
             ))}
-            <Button size="sm" className="ml-auto" onClick={() => open(j)}>
+            {j.tailored_text && (
+              <Button size="sm" variant="outline" className="ml-auto"
+                onClick={() => void downloadResumePdf(j.tailored_text!, j.title)}>
+                <Download className="h-4 w-4" /> PDF
+              </Button>
+            )}
+            <Button size="sm" className={j.tailored_text ? "" : "ml-auto"} onClick={() => open(j)}>
               <Sparkles className="h-4 w-4" /> Improve for this job
             </Button>
           </div>
@@ -144,6 +151,9 @@ export function JobMatches({
           <Textarea value={text} onChange={(e) => setText(e.target.value)} className="h-80 font-mono text-xs" />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => editing && void downloadResumePdf(text, editing.title)}>
+              <Download className="h-4 w-4" /> Download PDF
+            </Button>
             <Button onClick={() => saveRun.mutate()} disabled={saveRun.isPending}>
               {saveRun.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Save & re-score
             </Button>
