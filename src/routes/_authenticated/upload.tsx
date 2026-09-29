@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/upload")({
       },
     ],
   }),
-  component: UploadPage;
+  component: UploadPage,
 });
 
 function UploadPage() {
