@@ -98,6 +98,7 @@ export type JobMatch = {
   matching_skills?: string[];
   missing_skills?: string[];
   search_keywords?: string;
+  tailored_text?: string;
 };
 
 const clamp = (n: unknown) =>
@@ -159,7 +160,7 @@ export const saveEditedResume = createServerFn({ method: "POST" })
       .from("resumes").select("job_matches").eq("id", data.resumeId).eq("user_id", userId).single();
     const jobs = ((row?.job_matches as JobMatch[] | null) ?? []).map((j) =>
       j.title === data.jobTitle
-        ? { ...j, match_score: clamp(score.match_score), why: score.why ?? j.why,
+        ? { ...j, tailored_text: data.text, match_score: clamp(score.match_score), why: score.why ?? j.why,
             matching_skills: score.matching_skills ?? j.matching_skills,
             missing_skills: score.missing_skills ?? j.missing_skills }
         : j,
@@ -173,4 +174,24 @@ export const saveEditedResume = createServerFn({ method: "POST" })
     }).eq("id", data.resumeId).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { score: clamp(score.match_score) };
+  });
+
+export type InterviewQA = { category: string; question: string; answer: string; tip: string };
+
+export const generateInterviewPrep = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { resumeId: string; jobTitle: string; jobListing: string }) => {
+    if (!input.jobTitle?.trim()) throw new Error("Job title is required.");
+    return { ...input, jobListing: (input.jobListing ?? "").slice(0, 15000) };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: resume } = await supabase
+      .from("resumes").select("raw_text").eq("id", data.resumeId).eq("user_id", userId).single();
+    if (!resume?.raw_text) throw new Error("Resume not found.");
+    const { gatewayJson, interviewPrompt } = await import("./ai-gateway.server");
+    const out = (await gatewayJson(
+      interviewPrompt(resume.raw_text, data.jobTitle, data.jobListing || `A typical ${data.jobTitle} role.`),
+    )) as { questions?: InterviewQA[] };
+    return { questions: (out.questions ?? []).filter((q) => q?.question) };
   });
