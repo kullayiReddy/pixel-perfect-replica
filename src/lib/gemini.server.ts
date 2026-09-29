@@ -93,3 +93,33 @@ RESUME TEXT:
 ${resumeText.slice(0, 40000)}
 """`;
 }
+
+export function jobSuggestPrompt(resumeText: string) {
+  return `You are a career advisor and ATS expert. Based on this resume, suggest the 8 job titles the candidate is best suited for right now. Return ONLY JSON:
+{"jobs":[{"title": string, "seniority": string, "match_score": integer 0-100, "why": one short sentence, "matching_skills":[string], "missing_skills":[string], "search_keywords": short search string for job boards}]}
+Sort by match_score descending. Be realistic, not flattering.
+
+RESUME TEXT:
+"""
+${resumeText.slice(0, 30000)}
+"""`;
+}
+
+export function tailorPrompt(resumeText: string, jobTitle: string) {
+  return `You are an expert resume writer. Rewrite the resume below so it scores higher for the role "${jobTitle}" in ATS systems. Keep all facts truthful: do not invent employers, degrees, dates or metrics. You may reorder, rephrase bullets with stronger action verbs, surface relevant skills already implied, and add a targeted summary. Return ONLY JSON:
+{"tailored_text": full resume as plain text with section headings, "changes":[string], "current_score": integer 0-100, "projected_score": integer 0-100}
+
+RESUME TEXT:
+"""
+${resumeText.slice(0, 30000)}
+"""`;
+}
+
+export function scoreTitlePrompt(resumeText: string, jobTitle: string) {
+  return `As an ATS analyst, score how well this resume matches a typical "${jobTitle}" role. Return ONLY JSON: {"match_score": integer 0-100, "why": one short sentence, "matching_skills":[string], "missing_skills":[string]}
+
+RESUME TEXT:
+"""
+${resumeText.slice(0, 30000)}
+"""`;
+}
