@@ -13,6 +13,7 @@ import {
 import {
   saveEditedResume, suggestJobs, tailorResume, type JobMatch,
 } from "@/lib/resume.functions";
+import { JobOpenings } from "@/components/job-openings";
 import { downloadResumePdf } from "@/lib/resume-pdf";
 
 function platformLinks(q: string) {
@@ -124,6 +125,7 @@ export function JobMatches({
               <Sparkles className="h-4 w-4" /> Improve for this job
             </Button>
           </div>
+          <JobOpenings resumeId={resumeId} jobTitle={j.title} initial={j.openings} />
         </div>
       ))}
 
