@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Target, Trash2 } from "lucide-react";
+import { JobMatches } from "@/components/job-matches";
+import type { JobMatch } from "@/lib/resume.functions";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -139,12 +141,23 @@ function ResumeDetails() {
         </p>
       )}
 
-      <Tabs defaultValue="profile" className="mt-8">
+      <Tabs defaultValue="jobs" className="mt-8">
         <TabsList>
+          <TabsTrigger value="jobs">Matching jobs</TabsTrigger>
           <TabsTrigger value="profile">Extracted resume</TabsTrigger>
           <TabsTrigger value="match">Job match</TabsTrigger>
           <TabsTrigger value="text">Raw text</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="jobs" className="mt-6">
+          {resume.data?.status === "parsed" && (
+            <JobMatches
+              resumeId={id}
+              rawText={resume.data.raw_text ?? ""}
+              jobs={(resume.data.job_matches as JobMatch[] | null) ?? null}
+            />
+          )}
+        </TabsContent>
 
         <TabsContent value="profile" className="mt-6 space-y-6">
           {parsed.summary && (
