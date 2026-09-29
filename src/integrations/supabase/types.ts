@@ -86,6 +86,7 @@ export type Database = {
           file_size: number
           file_type: string
           id: string
+          job_matches: Json | null
           original_filename: string
           overall_confidence: number | null
           parsed: Json | null
@@ -100,6 +101,7 @@ export type Database = {
           file_size?: number
           file_type: string
           id?: string
+          job_matches?: Json | null
           original_filename: string
           overall_confidence?: number | null
           parsed?: Json | null
@@ -114,6 +116,7 @@ export type Database = {
           file_size?: number
           file_type?: string
           id?: string
+          job_matches?: Json | null
           original_filename?: string
           overall_confidence?: number | null
           parsed?: Json | null

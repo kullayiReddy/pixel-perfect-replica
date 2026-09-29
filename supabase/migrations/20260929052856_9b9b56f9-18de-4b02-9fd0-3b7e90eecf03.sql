@@ -1,0 +1,1 @@
+ALTER TABLE public.resumes ADD COLUMN IF NOT EXISTS job_matches jsonb;
